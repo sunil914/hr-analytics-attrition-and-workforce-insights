@@ -31,8 +31,22 @@ This project explores workforce composition and attrition patterns using IBM’s
 
 - [`data/`](data/) — cleaned data with source and validation notes
 - [`sql/`](sql/) — executable SQLite schema, aggregate workforce views and run guide
+- [`scripts/prepare_data.py`](scripts/prepare_data.py) — dependency-free source preparation with KPI and checksum validation
 - [`scripts/build_database.py`](scripts/build_database.py) — standard-library loader that rebuilds and validates `project.db`
 - [`tableau/`](tableau/) — build guide; workbook and screenshots are still pending
+
+## Reproduce the prepared data
+
+1. Download the original `WA_Fn-UseC_-HR-Employee-Attrition.csv` file from the linked Kaggle dataset.
+2. From the repository root, run:
+
+```bash
+python3 scripts/prepare_data.py path/to/WA_Fn-UseC_-HR-Employee-Attrition.csv
+```
+
+The dependency-free command preserves all 35 source fields, adds the four documented analysis fields and rebuilds `data/hr_attrition_clean.csv`. Before replacing the output, it validates employee-number uniqueness, **1,470 employees**, **237 attritions**, **16.12% attrition**, **7.01 years average tenure**, **$6,502.93 average monthly income** and the documented SHA-256.
+
+Then run `python3 scripts/build_database.py` to rebuild `project.db` and its workforce-analysis views.
 
 ## Tableau dashboard — in progress
 
@@ -60,7 +74,7 @@ Planned views:
 - [x] Responsible-use boundaries documented
 - [x] Add cleaned data with source and validation notes
 - [x] Add reproducible SQLite database loader
-- [ ] Add reproducible preparation code
+- [x] Add reproducible preparation code
 - [x] Add complete SQL schema and analysis views
 - [ ] Build and publish Tableau dashboard
 - [ ] Add dashboard screenshots and Tableau Public link

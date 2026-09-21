@@ -8,7 +8,21 @@ Build an organisation-level dashboard that helps an HR audience explore where at
 
 ## Source and required fields
 
-Use the cleaned one-row-per-employee dataset described in the project README. The prepared source should include:
+Use `data/hr_attrition_clean.csv` as the single Tableau data source. Before connecting Tableau, verify that the committed file matches the documented SHA-256:
+
+```bash
+# macOS
+shasum -a 256 data/hr_attrition_clean.csv
+
+# Linux
+sha256sum data/hr_attrition_clean.csv
+```
+
+Expected checksum: `988ab632ae57bb334d70763035823f938e181d3724868dcd78da68b7da29f7a7`.
+
+The CSV must contain 1,470 rows and one unique `Employee Number` per row. Use the SQLite aggregate views only as independent reconciliation checks; do not join them back to the employee-level CSV, because that can duplicate records and inflate KPIs.
+
+The prepared source should include:
 
 - `Employee Number` — unique employee identifier
 - `Attrition Flag` — 1 for attrition and 0 otherwise
@@ -149,6 +163,9 @@ Recommended filters are Department, Job Role, Age Band, Gender, Overtime, Busine
 
 ## Publishing checklist
 
+- [ ] Clean CSV checksum matches the documented SHA-256
+- [ ] Source contains 1,470 rows and 1,470 distinct employee numbers
+- [ ] No aggregate SQL view is joined to the employee-level CSV
 - [ ] All seven KPI checkpoints reconcile with the README
 - [ ] Filters update the intended worksheets consistently
 - [ ] Small groups are suppressed using the visible threshold

@@ -32,6 +32,7 @@ This project explores workforce composition and attrition patterns using IBM’s
 - [`data/`](data/) — cleaned data with source and validation notes
 - [`sql/`](sql/) — executable SQLite schema, aggregate workforce views and run guide
 - [`scripts/prepare_data.py`](scripts/prepare_data.py) — dependency-free source preparation with KPI and checksum validation
+- [`scripts/prepare_tableau_data.py`](scripts/prepare_tableau_data.py) — validated, employee-level Tableau source preparation
 - [`scripts/build_database.py`](scripts/build_database.py) — standard-library loader that rebuilds and validates `project.db`
 - [`tableau/`](tableau/) — build guide; workbook and screenshots are still pending
 
@@ -47,6 +48,26 @@ python3 scripts/prepare_data.py path/to/WA_Fn-UseC_-HR-Employee-Attrition.csv
 The dependency-free command preserves all 35 source fields, adds the four documented analysis fields and rebuilds `data/hr_attrition_clean.csv`. Before replacing the output, it validates employee-number uniqueness, **1,470 employees**, **237 attritions**, **16.12% attrition**, **7.01 years average tenure**, **$6,502.93 average monthly income** and the documented SHA-256.
 
 Then run `python3 scripts/build_database.py` to rebuild `project.db` and its workforce-analysis views.
+
+## Prepare the Tableau source
+
+From the repository root, run:
+
+```bash
+python3 scripts/prepare_tableau_data.py
+```
+
+The dependency-free command verifies the committed clean-data checksum, the 39-column schema, 1,470 unique employee numbers, all four derived fields, the five opening KPIs and the **30.53% / 10.44%** overtime benchmarks before atomically writing `tableau/hr_attrition_tableau.csv`.
+
+Custom source and output paths are supported:
+
+```bash
+python3 scripts/prepare_tableau_data.py \
+  --source "path/to/hr_attrition_clean.csv" \
+  --output "path/to/hr_attrition_tableau.csv"
+```
+
+A failed validation leaves the previous output untouched. Use the generated employee-level CSV as Tableau's only data source and the SQLite aggregate views only for independent reconciliation; never join aggregate views back to employee rows or expose `EmployeeNumber` in dashboards, tooltips or downloads.
 
 ## Tableau dashboard — in progress
 

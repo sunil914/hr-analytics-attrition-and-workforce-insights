@@ -8,26 +8,30 @@ Build an organisation-level dashboard that helps an HR audience explore where at
 
 ## Source and required fields
 
-Use `data/hr_attrition_clean.csv` as the single Tableau data source. Before connecting Tableau, verify that the committed file matches the documented SHA-256:
+Generate the validated employee-level Tableau source from the repository root:
 
 ```bash
-# macOS
-shasum -a 256 data/hr_attrition_clean.csv
-
-# Linux
-sha256sum data/hr_attrition_clean.csv
+python3 scripts/prepare_tableau_data.py
 ```
 
-Expected checksum: `988ab632ae57bb334d70763035823f938e181d3724868dcd78da68b7da29f7a7`.
+The command verifies the committed clean-data SHA-256, exact 39-column schema, 1,470 unique `EmployeeNumber` values, all four derived fields, five opening KPIs and the 30.53% / 10.44% overtime benchmarks before atomically writing `tableau/hr_attrition_tableau.csv`. A failed check leaves an existing output unchanged.
 
-The CSV must contain 1,470 rows and one unique `Employee Number` per row. Use the SQLite aggregate views only as independent reconciliation checks; do not join them back to the employee-level CSV, because that can duplicate records and inflate KPIs.
+Use controlled alternative paths when needed:
+
+```bash
+python3 scripts/prepare_tableau_data.py \
+  --source "path/to/hr_attrition_clean.csv" \
+  --output "path/to/hr_attrition_tableau.csv"
+```
+
+Connect Tableau only to the generated CSV. Use the SQLite aggregate views as independent reconciliation checks; do not join them back to the employee-level source because that can duplicate records and inflate KPIs.
 
 The prepared source should include:
 
-- `Employee Number` — unique employee identifier
+- `EmployeeNumber` — unique employee identifier
 - `Attrition Flag` — 1 for attrition and 0 otherwise
-- `Age`, `Monthly Income` and `Years at Company`
-- `Department`, `Job Role`, `Gender`, `Overtime` and `Business Travel`
+- `Age`, `MonthlyIncome` and `YearsAtCompany`
+- `Department`, `JobRole`, `Gender`, `OverTime` and `BusinessTravel`
 - `Age Band`, `Income Band` and `Tenure Band`
 
 Keep the dashboard at aggregate level. Do not expose employee identifiers in worksheets, tooltips or downloadable detail.
@@ -55,7 +59,7 @@ Adjust field names only if the cleaned source uses a different naming convention
 ### Employees
 
 ```text
-COUNTD([Employee Number])
+COUNTD([EmployeeNumber])
 ```
 
 ### Attritions
@@ -67,8 +71,8 @@ SUM([Attrition Flag])
 ### Attrition Rate
 
 ```text
-IF COUNTD([Employee Number]) = 0 THEN 0
-ELSE SUM([Attrition Flag]) / COUNTD([Employee Number])
+IF COUNTD([EmployeeNumber]) = 0 THEN 0
+ELSE SUM([Attrition Flag]) / COUNTD([EmployeeNumber])
 END
 ```
 
@@ -79,7 +83,7 @@ Format as a percentage with two decimal places.
 Create an integer parameter named `Minimum Group Size` with a default value of 10. Then create:
 
 ```text
-COUNTD([Employee Number]) >= [Minimum Group Size]
+COUNTD([EmployeeNumber]) >= [Minimum Group Size]
 ```
 
 Place this Boolean field on Filters and keep `True` for segmented views. This avoids presenting unstable rates for very small groups; retain the employee-count mark so viewers can judge context.
@@ -92,7 +96,7 @@ Show Employees, Attritions, Attrition Rate, average Years at Company and average
 
 ### 2. Attrition by job role
 
-- Rows: `Job Role`
+- Rows: `JobRole`
 - Columns: `Attrition Rate`
 - Label: `Employees`
 - Filter: minimum group size
@@ -102,7 +106,7 @@ Use a reference line for the overall 16.12% rate. The employee count should rema
 
 ### 3. Overtime comparison
 
-- Columns: `Overtime`
+- Columns: `OverTime`
 - Rows: `Attrition Rate`
 - Label: attrition rate and employees
 - Expected validation: 30.53% for overtime and 10.44% without overtime
@@ -124,7 +128,7 @@ Use the explicit band order from the prepared data rather than alphabetical sort
 
 ### 6. Business travel
 
-Compare attrition rate and employee count by `Business Travel`. Keep category labels fully visible and avoid abbreviations that may be unclear.
+Compare attrition rate and employee count by `BusinessTravel`. Keep category labels fully visible and avoid abbreviations that may be unclear.
 
 ### 7. Workforce profile
 
@@ -142,7 +146,7 @@ Use a desktop canvas around 1200 × 850 pixels:
 6. Age- and income-band views
 7. Filter panel and responsible-use note
 
-Recommended filters are Department, Job Role, Age Band, Gender, Overtime, Business Travel and Tenure Band. Apply filters to all relevant worksheets using the same data source. Include a visible reset control.
+Recommended filters are `Department`, `JobRole`, `Age Band`, `Gender`, `OverTime`, `BusinessTravel` and `Tenure Band`. Apply filters to all relevant worksheets using the same data source. Include a visible reset control.
 
 ## Interaction and tooltip rules
 

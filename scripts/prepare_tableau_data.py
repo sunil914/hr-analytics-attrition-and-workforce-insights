@@ -168,13 +168,18 @@ def main() -> None:
         default=ROOT / "tableau" / "hr_attrition_tableau.csv",
         help="validated Tableau CSV (default: tableau/hr_attrition_tableau.csv)",
     )
+    parser.add_argument(
+        "--check-only",
+        action="store_true",
+        help="Validate the employee source without creating or replacing the Tableau CSV.",
+    )
     args = parser.parse_args()
 
     source = args.source.resolve()
     output = args.output.resolve()
     if not source.is_file():
         raise FileNotFoundError(f"Tableau source not found: {source}")
-    if source == output:
+    if not args.check_only and source == output:
         raise ValueError("Source and output paths must be different.")
 
     digest = sha256(source)
@@ -183,6 +188,19 @@ def main() -> None:
             f"SHA-256 mismatch: expected {EXPECTED_SHA256}, got {digest}"
         )
     rows, attritions, average_tenure, average_income, overtime_rates = validate(source)
+
+    if args.check_only:
+        print(
+            f"Validation passed for {rows:,} employees; "
+            "no Tableau output written."
+        )
+        print(f"Attritions: {attritions:,}")
+        print(f"Average tenure: {average_tenure:.2f} years")
+        print(f"Average monthly income: ${average_income:,.2f}")
+        print(f"Overtime attrition: {overtime_rates['Yes']:.2f}%")
+        print(f"Non-overtime attrition: {overtime_rates['No']:.2f}%")
+        print(f"SHA-256: {digest}")
+        return
 
     output.parent.mkdir(parents=True, exist_ok=True)
     descriptor, temporary_name = tempfile.mkstemp(

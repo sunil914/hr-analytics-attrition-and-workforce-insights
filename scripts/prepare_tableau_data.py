@@ -28,6 +28,7 @@ SOURCE_COLUMNS = [
 DERIVED_COLUMNS = ["Attrition Flag", "Age Band", "Tenure Band", "Income Band"]
 EXPECTED_ROWS = 1_470
 EXPECTED_ATTRITIONS = 237
+EXPECTED_ATTRITION_RATE = 16.12
 EXPECTED_SHA256 = "988ab632ae57bb334d70763035823f938e181d3724868dcd78da68b7da29f7a7"
 EXPECTED_OVERTIME_RATES = {"Yes": 30.53, "No": 10.44}
 
@@ -74,7 +75,7 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def validate(path: Path) -> tuple[int, int, float, float, dict[str, float]]:
+def validate(path: Path) -> tuple[int, int, float, float, float, dict[str, float]]:
     rows = attritions = tenure_total = income_total = 0
     employee_numbers: set[int] = set()
     overtime = {"Yes": [0, 0], "No": [0, 0]}
@@ -126,6 +127,7 @@ def validate(path: Path) -> tuple[int, int, float, float, dict[str, float]]:
 
     if rows == 0:
         raise ValueError("Tableau source contains no employee rows.")
+    attrition_rate = round(100 * attritions / rows, 2)
     average_tenure = round(tenure_total / rows, 2)
     average_income = round(income_total / rows, 2)
     overtime_rates = {
@@ -136,7 +138,7 @@ def validate(path: Path) -> tuple[int, int, float, float, dict[str, float]]:
         "employees": (rows, EXPECTED_ROWS),
         "unique employee numbers": (len(employee_numbers), EXPECTED_ROWS),
         "attritions": (attritions, EXPECTED_ATTRITIONS),
-        "attrition rate": (round(100 * attritions / rows, 2), 16.12),
+        "attrition rate": (attrition_rate, EXPECTED_ATTRITION_RATE),
         "average tenure": (average_tenure, 7.01),
         "average monthly income": (average_income, 6_502.93),
         "overtime attrition rate": (overtime_rates["Yes"], EXPECTED_OVERTIME_RATES["Yes"]),
@@ -149,7 +151,7 @@ def validate(path: Path) -> tuple[int, int, float, float, dict[str, float]]:
     ]
     if failures:
         raise ValueError("Validation failed:\n- " + "\n- ".join(failures))
-    return rows, attritions, average_tenure, average_income, overtime_rates
+    return rows, attritions, attrition_rate, average_tenure, average_income, overtime_rates
 
 
 def main() -> None:
@@ -187,7 +189,7 @@ def main() -> None:
         raise ValueError(
             f"SHA-256 mismatch: expected {EXPECTED_SHA256}, got {digest}"
         )
-    rows, attritions, average_tenure, average_income, overtime_rates = validate(source)
+    rows, attritions, attrition_rate, average_tenure, average_income, overtime_rates = validate(source)
 
     if args.check_only:
         print(
@@ -195,6 +197,7 @@ def main() -> None:
             "no Tableau output written."
         )
         print(f"Attritions: {attritions:,}")
+        print(f"Attrition rate: {attrition_rate:.2f}%")
         print(f"Average tenure: {average_tenure:.2f} years")
         print(f"Average monthly income: ${average_income:,.2f}")
         print(f"Overtime attrition: {overtime_rates['Yes']:.2f}%")
@@ -221,6 +224,7 @@ def main() -> None:
 
     print(f"Prepared {rows:,} Tableau employee rows in {output}.")
     print(f"Attritions: {attritions:,}")
+    print(f"Attrition rate: {attrition_rate:.2f}%")
     print(f"Average tenure: {average_tenure:.2f} years")
     print(f"Average monthly income: ${average_income:,.2f}")
     print(f"Overtime attrition: {overtime_rates['Yes']:.2f}%")

@@ -31,6 +31,13 @@ EXPECTED_ATTRITIONS = 237
 EXPECTED_ATTRITION_RATE = 16.12
 EXPECTED_SHA256 = "988ab632ae57bb334d70763035823f938e181d3724868dcd78da68b7da29f7a7"
 EXPECTED_OVERTIME_RATES = {"Yes": 30.53, "No": 10.44}
+SATISFACTION_FIELDS = (
+    "EnvironmentSatisfaction",
+    "JobInvolvement",
+    "JobSatisfaction",
+    "RelationshipSatisfaction",
+    "WorkLifeBalance",
+)
 
 
 def age_band(age: int) -> str:
@@ -96,6 +103,13 @@ def validate(path: Path) -> tuple[int, int, float, float, float, dict[str, float
                 tenure = int(row["YearsAtCompany"])
                 income = int(row["MonthlyIncome"])
                 attrition_flag = int(row["Attrition Flag"])
+                total_working_years = int(row["TotalWorkingYears"])
+                role_years = int(row["YearsInCurrentRole"])
+                promotion_years = int(row["YearsSinceLastPromotion"])
+                manager_years = int(row["YearsWithCurrManager"])
+                satisfaction = {
+                    field: int(row[field]) for field in SATISFACTION_FIELDS
+                }
             except (TypeError, ValueError) as exc:
                 raise ValueError(
                     f"Invalid numeric value on CSV line {line_number}."
@@ -104,6 +118,31 @@ def validate(path: Path) -> tuple[int, int, float, float, float, dict[str, float
             if employee_number in employee_numbers:
                 raise ValueError(f"Duplicate EmployeeNumber: {employee_number}")
             employee_numbers.add(employee_number)
+
+            if employee_number <= 0 or age <= 0 or income <= 0:
+                raise ValueError(
+                    "EmployeeNumber, Age and MonthlyIncome must be positive on "
+                    f"CSV line {line_number}."
+                )
+            if tenure < 0 or tenure > total_working_years:
+                raise ValueError(
+                    f"Invalid company tenure on CSV line {line_number}."
+                )
+            timeline_fields = {
+                "YearsInCurrentRole": role_years,
+                "YearsSinceLastPromotion": promotion_years,
+                "YearsWithCurrManager": manager_years,
+            }
+            for field, value in timeline_fields.items():
+                if value < 0 or value > tenure:
+                    raise ValueError(
+                        f"{field} exceeds company tenure on CSV line {line_number}."
+                    )
+            for field, value in satisfaction.items():
+                if value not in range(1, 5):
+                    raise ValueError(
+                        f"{field} must be between 1 and 4 on CSV line {line_number}."
+                    )
 
             expected_attrition = int(row["Attrition"] == "Yes")
             if row["Attrition"] not in {"Yes", "No"} or attrition_flag != expected_attrition:
